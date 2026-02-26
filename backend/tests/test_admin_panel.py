@@ -516,7 +516,7 @@ def test_admin_delete_comment_success(admin_client, admin_token, deletable_comme
 def test_regular_user_cannot_delete_comment(regular_client, regular_user_token):
     """Test that regular user cannot delete comments"""
     token, user_id = regular_user_token
-    response = api_client.delete(
+    response = regular_client.delete(
         f"{BASE_URL}/api/admin/comments/some_comment_id",
         headers={"Authorization": f"Bearer {token}"}
     )
