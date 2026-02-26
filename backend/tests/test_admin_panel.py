@@ -257,7 +257,7 @@ def test_admin_unban_user_success(api_client, admin_token, bannable_user):
     assert login_response.status_code == 200
     print(f"✓ Unbanned user can login again")
 
-def test_admin_cannot_ban_admin(api_client, admin_token):
+def test_admin_cannot_ban_admin(admin_client, admin_token):
     """Test that admin cannot ban another admin user"""
     # Get admin user_id
     me_response = api_client.get(
@@ -341,7 +341,7 @@ def test_admin_delete_user_success(api_client, admin_token, deletable_user):
     assert deleted_user is None
     print(f"✓ User removed from database")
 
-def test_admin_cannot_delete_admin(api_client, admin_token):
+def test_admin_cannot_delete_admin(admin_client, admin_token):
     """Test that admin cannot delete another admin user"""
     # Get admin user_id
     me_response = api_client.get(
@@ -359,7 +359,7 @@ def test_admin_cannot_delete_admin(api_client, admin_token):
     assert "Cannot delete an admin" in data["detail"]
     print("✓ Admin cannot delete another admin (403)")
 
-def test_regular_user_cannot_delete_user(api_client, regular_user_token):
+def test_regular_user_cannot_delete_user(regular_client, regular_user_token):
     """Test that regular user cannot delete users"""
     token, user_id = regular_user_token
     response = api_client.delete(
@@ -433,7 +433,7 @@ def test_admin_delete_spot_success(api_client, admin_token, deletable_spot):
     assert spots_after == spots_before - 1
     print(f"✓ User points deducted: {points_before} -> {points_after}")
 
-def test_regular_user_cannot_delete_spot(api_client, regular_user_token):
+def test_regular_user_cannot_delete_spot(regular_client, regular_user_token):
     """Test that regular user cannot delete spots"""
     token, user_id = regular_user_token
     response = api_client.delete(
@@ -513,7 +513,7 @@ def test_admin_delete_comment_success(api_client, admin_token, deletable_comment
     assert comment_count_after == comment_count_before - 1
     print(f"✓ Spot comment_count decremented: {comment_count_before} -> {comment_count_after}")
 
-def test_regular_user_cannot_delete_comment(api_client, regular_user_token):
+def test_regular_user_cannot_delete_comment(regular_client, regular_user_token):
     """Test that regular user cannot delete comments"""
     token, user_id = regular_user_token
     response = api_client.delete(
