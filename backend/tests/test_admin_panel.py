@@ -81,9 +81,9 @@ def regular_user_token(regular_client):
 
 # ==================== ADMIN AUTH TESTS ====================
 
-def test_admin_login_returns_is_admin_true(api_client):
+def test_admin_login_returns_is_admin_true(admin_client):
     """Test that admin login returns is_admin:true"""
-    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+    response = admin_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": ADMIN_EMAIL,
         "password": ADMIN_PASSWORD
     })
