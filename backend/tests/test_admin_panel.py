@@ -436,7 +436,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
 def test_regular_user_cannot_delete_spot(regular_client, regular_user_token):
     """Test that regular user cannot delete spots"""
     token, user_id = regular_user_token
-    response = admin_client.delete(
+    response = regular_client.delete(
         f"{BASE_URL}/api/admin/spots/some_spot_id",
         headers={"Authorization": f"Bearer {token}"}
     )
