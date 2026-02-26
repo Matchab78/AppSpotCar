@@ -95,10 +95,10 @@ def test_admin_login_returns_is_admin_true(admin_client):
     assert data["email"] == ADMIN_EMAIL
     print(f"✓ Admin login returns is_admin=True for {ADMIN_EMAIL}")
 
-def test_regular_user_login_returns_is_admin_false(api_client, regular_user_token):
+def test_regular_user_login_returns_is_admin_false(regular_client, regular_user_token):
     """Test that regular user login returns is_admin:false"""
     token, user_id = regular_user_token
-    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+    response = regular_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": TEST_EMAIL,
         "password": TEST_PASSWORD
     })
@@ -109,9 +109,9 @@ def test_regular_user_login_returns_is_admin_false(api_client, regular_user_toke
 
 # ==================== ADMIN STATS TESTS ====================
 
-def test_admin_stats_success(api_client, admin_token):
+def test_admin_stats_success(admin_client, admin_token):
     """Test GET /api/admin/stats returns global statistics"""
-    response = api_client.get(
+    response = admin_client.get(
         f"{BASE_URL}/api/admin/stats",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -136,10 +136,10 @@ def test_admin_stats_success(api_client, admin_token):
     
     print(f"✓ Admin stats retrieved: {data['total_users']} users, {data['total_spots']} spots, {data['banned_users']} banned")
 
-def test_admin_stats_forbidden_for_regular_user(api_client, regular_user_token):
+def test_admin_stats_forbidden_for_regular_user(regular_client, regular_user_token):
     """Test that regular user gets 403 on /api/admin/stats"""
     token, user_id = regular_user_token
-    response = api_client.get(
+    response = regular_client.get(
         f"{BASE_URL}/api/admin/stats",
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -150,9 +150,9 @@ def test_admin_stats_forbidden_for_regular_user(api_client, regular_user_token):
 
 # ==================== ADMIN USERS LIST TESTS ====================
 
-def test_admin_list_users_success(api_client, admin_token):
+def test_admin_list_users_success(admin_client, admin_token):
     """Test GET /api/admin/users returns list of users"""
-    response = api_client.get(
+    response = admin_client.get(
         f"{BASE_URL}/api/admin/users",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -176,10 +176,10 @@ def test_admin_list_users_success(api_client, admin_token):
     
     print(f"✓ Admin users list retrieved: {len(data)} users")
 
-def test_admin_list_users_forbidden_for_regular_user(api_client, regular_user_token):
+def test_admin_list_users_forbidden_for_regular_user(regular_client, regular_user_token):
     """Test that regular user gets 403 on /api/admin/users"""
     token, user_id = regular_user_token
-    response = api_client.get(
+    response = regular_client.get(
         f"{BASE_URL}/api/admin/users",
         headers={"Authorization": f"Bearer {token}"}
     )
