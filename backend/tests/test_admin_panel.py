@@ -202,7 +202,7 @@ def bannable_user(api_client):
         return data["user_id"], email, "testpass123"
     pytest.skip("Cannot create bannable user")
 
-def test_admin_ban_user_success(api_client, admin_token, bannable_user):
+def test_admin_ban_user_success(admin_client, admin_token, bannable_user):
     """Test POST /api/admin/users/{user_id}/ban"""
     user_id, email, password = bannable_user
     response = api_client.post(
@@ -237,7 +237,7 @@ def test_banned_user_cannot_login(api_client, bannable_user):
     assert "banned" in data["detail"].lower()
     print(f"✓ Banned user cannot login (403)")
 
-def test_admin_unban_user_success(api_client, admin_token, bannable_user):
+def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
     """Test POST /api/admin/users/{user_id}/unban"""
     user_id, email, password = bannable_user
     response = api_client.post(
@@ -302,7 +302,7 @@ def deletable_user(api_client):
         return data["user_id"], data["token"]
     pytest.skip("Cannot create deletable user")
 
-def test_admin_delete_user_success(api_client, admin_token, deletable_user):
+def test_admin_delete_user_success(admin_client, admin_token, deletable_user):
     """Test DELETE /api/admin/users/{user_id}"""
     user_id, user_token = deletable_user
     
@@ -392,7 +392,7 @@ def deletable_spot(api_client, regular_user_token):
         return data["spot_id"], user_id
     pytest.skip("Cannot create deletable spot")
 
-def test_admin_delete_spot_success(api_client, admin_token, deletable_spot):
+def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
     """Test DELETE /api/admin/spots/{spot_id}"""
     spot_id, user_id = deletable_spot
     
@@ -476,7 +476,7 @@ def deletable_comment(api_client, regular_user_token):
         return comment["comment_id"], spot_id
     pytest.skip("Cannot create deletable comment")
 
-def test_admin_delete_comment_success(api_client, admin_token, deletable_comment):
+def test_admin_delete_comment_success(admin_client, admin_token, deletable_comment):
     """Test DELETE /api/admin/comments/{comment_id}"""
     comment_id, spot_id = deletable_comment
     
@@ -538,7 +538,7 @@ def badge_test_user(api_client):
         return response.json()["user_id"]
     pytest.skip("Cannot create badge test user")
 
-def test_admin_add_badge_success(api_client, admin_token, badge_test_user):
+def test_admin_add_badge_success(admin_client, admin_token, badge_test_user):
     """Test POST /api/admin/users/{user_id}/badges with action='add'"""
     user_id = badge_test_user
     
@@ -564,7 +564,7 @@ def test_admin_add_badge_success(api_client, admin_token, badge_test_user):
     assert "champion" in user["badges"]
     print(f"✓ Badge persisted in database")
 
-def test_admin_remove_badge_success(api_client, admin_token, badge_test_user):
+def test_admin_remove_badge_success(admin_client, admin_token, badge_test_user):
     """Test POST /api/admin/users/{user_id}/badges with action='remove'"""
     user_id = badge_test_user
     
