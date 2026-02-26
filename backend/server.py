@@ -548,6 +548,116 @@ async def get_all_badges():
 async def root():
     return {"message": "Street.OS API", "status": "running"}
 
+# ==================== ADMIN HELPERS ====================
+
+async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# ==================== ADMIN ROUTES ====================
+
+@api_router.get("/admin/stats")
+async def admin_stats(user: dict = Depends(require_admin)):
+    total_users = await db.users.count_documents({})
+    total_spots = await db.spots.count_documents({})
+    total_comments = await db.comments.count_documents({})
+    banned_users = await db.users.count_documents({"is_banned": True})
+    total_likes = 0
+    spots_cursor = db.spots.find({}, {"_id": 0, "like_count": 1})
+    async for s in spots_cursor:
+        total_likes += s.get("like_count", 0)
+    # Rarity distribution
+    rarity_dist = {}
+    for tier in ["common", "sport", "performance", "supercar", "hypercar", "ultra_rare"]:
+        rarity_dist[tier] = await db.spots.count_documents({"rarity_tier": tier})
+    return {
+        "total_users": total_users,
+        "total_spots": total_spots,
+        "total_comments": total_comments,
+        "total_likes": total_likes,
+        "banned_users": banned_users,
+        "rarity_distribution": rarity_dist,
+    }
+
+@api_router.get("/admin/users")
+async def admin_list_users(user: dict = Depends(require_admin)):
+    users = await db.users.find(
+        {},
+        {"_id": 0, "password_hash": 0}
+    ).sort("created_at", -1).to_list(500)
+    return users
+
+@api_router.delete("/admin/users/{target_user_id}")
+async def admin_delete_user(target_user_id: str, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"user_id": target_user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Cannot delete an admin")
+    await db.users.delete_one({"user_id": target_user_id})
+    await db.spots.delete_many({"user_id": target_user_id})
+    await db.comments.delete_many({"user_id": target_user_id})
+    await db.user_sessions.delete_many({"user_id": target_user_id})
+    return {"message": f"User {target_user_id} and all related data deleted"}
+
+@api_router.post("/admin/users/{target_user_id}/ban")
+async def admin_ban_user(target_user_id: str, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"user_id": target_user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Cannot ban an admin")
+    await db.users.update_one({"user_id": target_user_id}, {"$set": {"is_banned": True}})
+    await db.user_sessions.delete_many({"user_id": target_user_id})
+    return {"message": f"User {target_user_id} banned"}
+
+@api_router.post("/admin/users/{target_user_id}/unban")
+async def admin_unban_user(target_user_id: str, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"user_id": target_user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.users.update_one({"user_id": target_user_id}, {"$set": {"is_banned": False}})
+    return {"message": f"User {target_user_id} unbanned"}
+
+@api_router.delete("/admin/spots/{spot_id}")
+async def admin_delete_spot(spot_id: str, user: dict = Depends(require_admin)):
+    spot = await db.spots.find_one({"spot_id": spot_id}, {"_id": 0})
+    if not spot:
+        raise HTTPException(status_code=404, detail="Spot not found")
+    # Remove points from user
+    await db.users.update_one(
+        {"user_id": spot["user_id"]},
+        {"$inc": {"total_points": -spot.get("points", 0), "spot_count": -1}}
+    )
+    await db.spots.delete_one({"spot_id": spot_id})
+    await db.comments.delete_many({"spot_id": spot_id})
+    return {"message": f"Spot {spot_id} deleted"}
+
+@api_router.delete("/admin/comments/{comment_id}")
+async def admin_delete_comment(comment_id: str, user: dict = Depends(require_admin)):
+    comment = await db.comments.find_one({"comment_id": comment_id}, {"_id": 0})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    await db.comments.delete_one({"comment_id": comment_id})
+    await db.spots.update_one({"spot_id": comment["spot_id"]}, {"$inc": {"comment_count": -1}})
+    return {"message": f"Comment {comment_id} deleted"}
+
+@api_router.post("/admin/users/{target_user_id}/badges")
+async def admin_manage_badge(target_user_id: str, data: BadgeManage, user: dict = Depends(require_admin)):
+    target = await db.users.find_one({"user_id": target_user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    badges = target.get("badges", [])
+    if data.action == "add":
+        if data.badge_id not in badges:
+            badges.append(data.badge_id)
+    elif data.action == "remove":
+        if data.badge_id in badges:
+            badges.remove(data.badge_id)
+    await db.users.update_one({"user_id": target_user_id}, {"$set": {"badges": badges}})
+    return {"badges": badges}
+
 # Include the router in the main app
 app.include_router(api_router)
 
