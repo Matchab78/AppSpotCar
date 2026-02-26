@@ -205,7 +205,7 @@ def bannable_user(api_client):
 def test_admin_ban_user_success(admin_client, admin_token, bannable_user):
     """Test POST /api/admin/users/{user_id}/ban"""
     user_id, email, password = bannable_user
-    response = api_client.post(
+    response = admin_client.post(
         f"{BASE_URL}/api/admin/users/{user_id}/ban",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -215,7 +215,7 @@ def test_admin_ban_user_success(admin_client, admin_token, bannable_user):
     print(f"✓ User {user_id} banned successfully")
     
     # Verify user is actually banned in database
-    users_response = api_client.get(
+    users_response = admin_client.get(
         f"{BASE_URL}/api/admin/users",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -250,7 +250,7 @@ def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
     print(f"✓ User {user_id} unbanned successfully")
     
     # Verify user can now login
-    login_response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+    login_response = regular_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": email,
         "password": password
     })
@@ -260,13 +260,13 @@ def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
 def test_admin_cannot_ban_admin(admin_client, admin_token):
     """Test that admin cannot ban another admin user"""
     # Get admin user_id
-    me_response = api_client.get(
+    me_response = regular_client.get(
         f"{BASE_URL}/api/auth/me",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     admin_user_id = me_response.json()["user_id"]
     
-    response = api_client.post(
+    response = regular_client.post(
         f"{BASE_URL}/api/admin/users/{admin_user_id}/ban",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -292,7 +292,7 @@ def test_regular_user_cannot_ban(regular_client, regular_user_token, bannable_us
 def deletable_user(api_client):
     """Create a user that can be deleted"""
     email = f"test_deletable_{int(time.time())}@example.com"
-    response = api_client.post(f"{BASE_URL}/api/auth/register", json={
+    response = admin_client.post(f"{BASE_URL}/api/auth/register", json={
         "email": email,
         "password": "testpass123",
         "name": "Deletable User"
@@ -308,7 +308,7 @@ def test_admin_delete_user_success(admin_client, admin_token, deletable_user):
     
     # First create a spot for this user
     image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
-    spot_response = api_client.post(
+    spot_response = admin_client.post(
         f"{BASE_URL}/api/spots",
         headers={"Authorization": f"Bearer {user_token}"},
         json={
@@ -322,7 +322,7 @@ def test_admin_delete_user_success(admin_client, admin_token, deletable_user):
     spot_id = spot_response.json().get("spot_id")
     
     # Delete user
-    response = api_client.delete(
+    response = admin_client.delete(
         f"{BASE_URL}/api/admin/users/{user_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -332,7 +332,7 @@ def test_admin_delete_user_success(admin_client, admin_token, deletable_user):
     print(f"✓ User {user_id} deleted successfully")
     
     # Verify user no longer exists
-    users_response = api_client.get(
+    users_response = admin_client.get(
         f"{BASE_URL}/api/admin/users",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -344,7 +344,7 @@ def test_admin_delete_user_success(admin_client, admin_token, deletable_user):
 def test_admin_cannot_delete_admin(admin_client, admin_token):
     """Test that admin cannot delete another admin user"""
     # Get admin user_id
-    me_response = api_client.get(
+    me_response = admin_client.get(
         f"{BASE_URL}/api/auth/me",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -376,7 +376,7 @@ def deletable_spot(api_client, regular_user_token):
     """Create a spot that can be deleted"""
     token, user_id = regular_user_token
     image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
-    response = api_client.post(
+    response = admin_client.post(
         f"{BASE_URL}/api/spots",
         headers={"Authorization": f"Bearer {token}"},
         json={
@@ -397,7 +397,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
     spot_id, user_id = deletable_spot
     
     # Get user points before deletion
-    me_before = api_client.get(
+    me_before = admin_client.get(
         f"{BASE_URL}/api/profile/{user_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -405,7 +405,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
     spots_before = me_before.json()["spot_count"]
     
     # Delete spot
-    response = api_client.delete(
+    response = admin_client.delete(
         f"{BASE_URL}/api/admin/spots/{spot_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -415,7 +415,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
     print(f"✓ Spot {spot_id} deleted successfully")
     
     # Verify spot no longer exists
-    spot_response = api_client.get(
+    spot_response = admin_client.get(
         f"{BASE_URL}/api/spots/{spot_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -423,7 +423,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
     print(f"✓ Spot removed from database")
     
     # Verify user points were deducted
-    me_after = api_client.get(
+    me_after = admin_client.get(
         f"{BASE_URL}/api/profile/{user_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -436,7 +436,7 @@ def test_admin_delete_spot_success(admin_client, admin_token, deletable_spot):
 def test_regular_user_cannot_delete_spot(regular_client, regular_user_token):
     """Test that regular user cannot delete spots"""
     token, user_id = regular_user_token
-    response = api_client.delete(
+    response = admin_client.delete(
         f"{BASE_URL}/api/admin/spots/some_spot_id",
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -466,7 +466,7 @@ def deletable_comment(api_client, regular_user_token):
     spot_id = spot_response.json()["spot_id"]
     
     # Add comment to spot
-    comment_response = api_client.post(
+    comment_response = admin_client.post(
         f"{BASE_URL}/api/spots/{spot_id}/comments",
         headers={"Authorization": f"Bearer {token}"},
         json={"text": "This is a test comment to be deleted"}
@@ -481,14 +481,14 @@ def test_admin_delete_comment_success(admin_client, admin_token, deletable_comme
     comment_id, spot_id = deletable_comment
     
     # Get comment count before deletion
-    spot_before = api_client.get(
+    spot_before = admin_client.get(
         f"{BASE_URL}/api/spots/{spot_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     comment_count_before = spot_before.json()["comment_count"]
     
     # Delete comment
-    response = api_client.delete(
+    response = admin_client.delete(
         f"{BASE_URL}/api/admin/comments/{comment_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -498,14 +498,14 @@ def test_admin_delete_comment_success(admin_client, admin_token, deletable_comme
     print(f"✓ Comment {comment_id} deleted successfully")
     
     # Verify comment no longer exists
-    comments = api_client.get(f"{BASE_URL}/api/spots/{spot_id}/comments")
+    comments = admin_client.get(f"{BASE_URL}/api/spots/{spot_id}/comments")
     comments_list = comments.json()
     deleted_comment = next((c for c in comments_list if c["comment_id"] == comment_id), None)
     assert deleted_comment is None
     print(f"✓ Comment removed from database")
     
     # Verify spot comment_count was decremented
-    spot_after = api_client.get(
+    spot_after = admin_client.get(
         f"{BASE_URL}/api/spots/{spot_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -529,7 +529,7 @@ def test_regular_user_cannot_delete_comment(regular_client, regular_user_token):
 def badge_test_user(api_client):
     """Create a user for badge management tests"""
     email = f"test_badge_{int(time.time())}@example.com"
-    response = api_client.post(f"{BASE_URL}/api/auth/register", json={
+    response = admin_client.post(f"{BASE_URL}/api/auth/register", json={
         "email": email,
         "password": "testpass123",
         "name": "Badge Test User"
@@ -542,7 +542,7 @@ def test_admin_add_badge_success(admin_client, admin_token, badge_test_user):
     """Test POST /api/admin/users/{user_id}/badges with action='add'"""
     user_id = badge_test_user
     
-    response = api_client.post(
+    response = admin_client.post(
         f"{BASE_URL}/api/admin/users/{user_id}/badges",
         headers={"Authorization": f"Bearer {admin_token}"},
         json={"badge_id": "champion", "action": "add"}
@@ -554,7 +554,7 @@ def test_admin_add_badge_success(admin_client, admin_token, badge_test_user):
     print(f"✓ Badge 'champion' added to user {user_id}")
     
     # Verify badge persisted
-    users_response = api_client.get(
+    users_response = admin_client.get(
         f"{BASE_URL}/api/admin/users",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -584,7 +584,7 @@ def test_regular_user_cannot_manage_badges(regular_client, regular_user_token, b
     token, _ = regular_user_token
     user_id = badge_test_user
     
-    response = api_client.post(
+    response = regular_client.post(
         f"{BASE_URL}/api/admin/users/{user_id}/badges",
         headers={"Authorization": f"Bearer {token}"},
         json={"badge_id": "champion", "action": "add"}
