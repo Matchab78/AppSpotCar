@@ -440,7 +440,11 @@ async def create_spot(data: SpotCreate, user: dict = Depends(get_current_user)):
 
 @api_router.get("/spots")
 async def get_feed(skip: int = 0, limit: int = 20, user: dict = Depends(get_current_user)):
-    spots = await db.spots.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    # Get banned user IDs to exclude their spots
+    banned_users = await db.users.find({"is_banned": True}, {"_id": 0, "user_id": 1}).to_list(1000)
+    banned_ids = [u["user_id"] for u in banned_users]
+    query = {"user_id": {"$nin": banned_ids}} if banned_ids else {}
+    spots = await db.spots.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     # Add liked_by_me flag
     for spot in spots:
         spot["liked_by_me"] = user["user_id"] in spot.get("likes", [])
@@ -513,7 +517,7 @@ async def get_comments(spot_id: str):
 @api_router.get("/leaderboard")
 async def get_leaderboard(user: dict = Depends(get_current_user)):
     users = await db.users.find(
-        {},
+        {"is_banned": {"$ne": True}},
         {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "total_points": 1, "spot_count": 1, "badges": 1}
     ).sort("total_points", -1).to_list(100)
 
