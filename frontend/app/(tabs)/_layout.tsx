@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/styles/theme';
+import { useAuth } from '../../src/context/AuthContext';
 
 function FeedIcon({ color, size }: { color: string; size: number }) {
   return <Ionicons name="grid" size={size} color={color} />;
@@ -15,8 +16,14 @@ function RankIcon({ color, size }: { color: string; size: number }) {
 function ProfileIcon({ color, size }: { color: string; size: number }) {
   return <Ionicons name="person" size={size} color={color} />;
 }
+function AdminIcon({ color, size }: { color: string; size: number }) {
+  return <Ionicons name="shield" size={size} color={color} />;
+}
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const isAdmin = user?.is_admin === true;
+
   return (
     <Tabs
       screenOptions={{
@@ -54,6 +61,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{ title: 'Profil', tabBarIcon: ProfileIcon }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: AdminIcon,
+          href: isAdmin ? '/(tabs)/admin' : null,
+        }}
       />
     </Tabs>
   );
