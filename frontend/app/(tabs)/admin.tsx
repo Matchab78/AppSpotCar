@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
-  Alert, ScrollView, RefreshControl
+  Alert, ScrollView, RefreshControl, Platform, Modal, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -11,7 +11,7 @@ import { colors, monoFont } from '../../src/styles/theme';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type Tab = 'stats' | 'users' | 'spots' | 'comments';
+type Tab = 'stats' | 'users' | 'spots';
 
 interface AdminUser {
   user_id: string;
@@ -27,6 +27,7 @@ interface AdminUser {
 
 interface AdminSpot {
   spot_id: string;
+  user_id: string;
   user_name: string;
   brand: string;
   model: string;
@@ -46,6 +47,24 @@ interface Stats {
   rarity_distribution: Record<string, number>;
 }
 
+// Cross-platform confirm that works on web + mobile
+function confirmAction(title: string, message: string, onConfirm: () => void) {
+  if (Platform.OS === 'web') {
+    const result = window.confirm(`${title}\n\n${message}`);
+    if (result) onConfirm();
+  } else {
+    Alert.alert(title, message, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Confirmer', style: 'destructive', onPress: onConfirm },
+    ]);
+  }
+}
+
+const RARITY_COLORS: Record<string, string> = {
+  common: '#71717A', sport: '#3B82F6', performance: '#8B5CF6',
+  supercar: '#F59E0B', hypercar: '#EF4444', ultra_rare: '#EAB308',
+};
+
 export default function AdminScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('stats');
@@ -54,6 +73,12 @@ export default function AdminScreen() {
   const [spots, setSpots] = useState<AdminSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Badge modal state
+  const [badgeModal, setBadgeModal] = useState(false);
+  const [badgeTargetUser, setBadgeTargetUser] = useState<AdminUser | null>(null);
+  const [badgeId, setBadgeId] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -64,7 +89,7 @@ export default function AdminScreen() {
       } else if (activeTab === 'users') {
         const res = await fetch(`${BACKEND_URL}/api/admin/users`, { headers });
         if (res.ok) setUsers(await res.json());
-      } else if (activeTab === 'spots' || activeTab === 'comments') {
+      } else if (activeTab === 'spots') {
         const res = await fetch(`${BACKEND_URL}/api/spots?limit=100`, { headers });
         if (res.ok) setSpots(await res.json());
       }
@@ -79,41 +104,93 @@ export default function AdminScreen() {
   useFocusEffect(useCallback(() => { setLoading(true); fetchData(); }, [fetchData]));
 
   const handleDeleteUser = (targetId: string, name: string) => {
-    Alert.alert('Supprimer utilisateur', `Supprimer ${name} et toutes ses données ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer', style: 'destructive', onPress: async () => {
+    confirmAction(
+      'Supprimer utilisateur',
+      `Supprimer ${name} et toutes ses données (spots, commentaires, sessions) ?`,
+      async () => {
+        setActionLoading(targetId);
+        try {
           const res = await fetch(`${BACKEND_URL}/api/admin/users/${targetId}`, {
             method: 'DELETE', headers: { Authorization: `Bearer ${user?.token}` },
           });
-          if (res.ok) { setUsers(prev => prev.filter(u => u.user_id !== targetId)); }
+          if (res.ok) {
+            setUsers(prev => prev.filter(u => u.user_id !== targetId));
+          } else {
+            const err = await res.json().catch(() => ({}));
+            if (Platform.OS === 'web') window.alert(err.detail || 'Erreur lors de la suppression');
+            else Alert.alert('Erreur', err.detail || 'Erreur lors de la suppression');
+          }
+        } catch (e) {
+          console.log('Delete user error:', e);
+        } finally {
+          setActionLoading(null);
         }
-      },
-    ]);
+      }
+    );
   };
 
   const handleBanUser = async (targetId: string, isBanned: boolean) => {
-    const endpoint = isBanned ? 'unban' : 'ban';
-    const res = await fetch(`${BACKEND_URL}/api/admin/users/${targetId}/${endpoint}`, {
-      method: 'POST', headers: { Authorization: `Bearer ${user?.token}` },
-    });
-    if (res.ok) {
-      setUsers(prev => prev.map(u => u.user_id === targetId ? { ...u, is_banned: !isBanned } : u));
+    setActionLoading(targetId);
+    try {
+      const endpoint = isBanned ? 'unban' : 'ban';
+      const res = await fetch(`${BACKEND_URL}/api/admin/users/${targetId}/${endpoint}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.user_id === targetId ? { ...u, is_banned: !isBanned } : u));
+      }
+    } catch (e) {
+      console.log('Ban/unban error:', e);
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const handleDeleteSpot = (spotId: string) => {
-    Alert.alert('Supprimer spot', 'Supprimer ce spot et retirer les points ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer', style: 'destructive', onPress: async () => {
+  const handleDeleteSpot = (spotId: string, carName: string) => {
+    confirmAction(
+      'Supprimer spot',
+      `Supprimer "${carName}" ? Les points seront retirés au propriétaire.`,
+      async () => {
+        setActionLoading(spotId);
+        try {
           const res = await fetch(`${BACKEND_URL}/api/admin/spots/${spotId}`, {
             method: 'DELETE', headers: { Authorization: `Bearer ${user?.token}` },
           });
-          if (res.ok) { setSpots(prev => prev.filter(s => s.spot_id !== spotId)); }
+          if (res.ok) {
+            setSpots(prev => prev.filter(s => s.spot_id !== spotId));
+          } else {
+            const err = await res.json().catch(() => ({}));
+            if (Platform.OS === 'web') window.alert(err.detail || 'Erreur lors de la suppression');
+            else Alert.alert('Erreur', err.detail || 'Erreur lors de la suppression');
+          }
+        } catch (e) {
+          console.log('Delete spot error:', e);
+        } finally {
+          setActionLoading(null);
         }
-      },
-    ]);
+      }
+    );
+  };
+
+  const handleManageBadge = async (action: 'add' | 'remove') => {
+    if (!badgeTargetUser || !badgeId.trim()) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/admin/users/${badgeTargetUser.user_id}/badges`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ badge_id: badgeId.trim(), action }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(prev => prev.map(u =>
+          u.user_id === badgeTargetUser.user_id ? { ...u, badges: data.badges } : u
+        ));
+        setBadgeModal(false);
+        setBadgeId('');
+      }
+    } catch (e) {
+      console.log('Badge error:', e);
+    }
   };
 
   if (!user?.is_admin) {
@@ -127,11 +204,6 @@ export default function AdminScreen() {
     );
   }
 
-  const RARITY_COLORS: Record<string, string> = {
-    common: '#71717A', sport: '#3B82F6', performance: '#8B5CF6',
-    supercar: '#F59E0B', hypercar: '#EF4444', ultra_rare: '#EAB308',
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -141,7 +213,7 @@ export default function AdminScreen() {
       </View>
 
       {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow} contentContainerStyle={styles.tabsContent}>
         {(['stats', 'users', 'spots'] as Tab[]).map(tab => (
           <TouchableOpacity
             testID={`admin-tab-${tab}`}
@@ -167,31 +239,19 @@ export default function AdminScreen() {
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.primary} />}
             >
               <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <Ionicons name="people" size={28} color={colors.secondary} />
-                  <Text style={styles.statValue}>{stats.total_users}</Text>
-                  <Text style={styles.statLabel}>UTILISATEURS</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="camera" size={28} color={colors.primary} />
-                  <Text style={styles.statValue}>{stats.total_spots}</Text>
-                  <Text style={styles.statLabel}>SPOTS</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="chatbubbles" size={28} color={colors.accent} />
-                  <Text style={styles.statValue}>{stats.total_comments}</Text>
-                  <Text style={styles.statLabel}>COMMENTAIRES</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="heart" size={28} color={colors.error} />
-                  <Text style={styles.statValue}>{stats.total_likes}</Text>
-                  <Text style={styles.statLabel}>LIKES</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="ban" size={28} color="#F59E0B" />
-                  <Text style={styles.statValue}>{stats.banned_users}</Text>
-                  <Text style={styles.statLabel}>BANNIS</Text>
-                </View>
+                {[
+                  { icon: 'people' as const, value: stats.total_users, label: 'UTILISATEURS', color: colors.secondary },
+                  { icon: 'camera' as const, value: stats.total_spots, label: 'SPOTS', color: colors.primary },
+                  { icon: 'chatbubbles' as const, value: stats.total_comments, label: 'COMMENTAIRES', color: colors.accent },
+                  { icon: 'heart' as const, value: stats.total_likes, label: 'LIKES', color: colors.error },
+                  { icon: 'ban' as const, value: stats.banned_users, label: 'BANNIS', color: '#F59E0B' },
+                ].map((s, i) => (
+                  <View key={i} style={styles.statCard}>
+                    <Ionicons name={s.icon} size={28} color={s.color} />
+                    <Text style={styles.statValue}>{s.value}</Text>
+                    <Text style={styles.statLabel}>{s.label}</Text>
+                  </View>
+                ))}
               </View>
 
               <Text style={styles.sectionTitle}>DISTRIBUTION RARETÉ</Text>
@@ -222,27 +282,25 @@ export default function AdminScreen() {
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
                       </View>
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <View style={styles.nameRow}>
-                          <Text style={styles.userName}>{item.name}</Text>
+                          <Text style={styles.userName} numberOfLines={1}>{item.name}</Text>
                           {item.is_admin && (
-                            <View style={styles.adminBadge}>
-                              <Text style={styles.adminBadgeText}>ADMIN</Text>
-                            </View>
+                            <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>ADMIN</Text></View>
                           )}
                           {item.is_banned && (
-                            <View style={styles.bannedBadge}>
-                              <Text style={styles.bannedBadgeText}>BANNI</Text>
-                            </View>
+                            <View style={styles.bannedBadge}><Text style={styles.bannedBadgeText}>BANNI</Text></View>
                           )}
                         </View>
-                        <Text style={styles.userEmail}>{item.email}</Text>
+                        <Text style={styles.userEmail} numberOfLines={1}>{item.email}</Text>
                       </View>
                     </View>
                     <Text style={styles.userPoints}>{item.total_points} pts</Text>
                   </View>
                   <View style={styles.userMeta}>
-                    <Text style={styles.userMetaText}>{item.spot_count} spots • {item.badges?.length || 0} badges</Text>
+                    <Text style={styles.userMetaText}>
+                      {item.spot_count} spots • {item.badges?.length || 0} badges
+                    </Text>
                   </View>
                   {!item.is_admin && (
                     <View style={styles.userActions}>
@@ -250,16 +308,32 @@ export default function AdminScreen() {
                         testID={`ban-user-${item.user_id}`}
                         style={[styles.actionChip, item.is_banned ? styles.actionChipGreen : styles.actionChipYellow]}
                         onPress={() => handleBanUser(item.user_id, item.is_banned)}
+                        disabled={actionLoading === item.user_id}
                       >
-                        <Ionicons name={item.is_banned ? 'checkmark-circle' : 'ban'} size={14} color={item.is_banned ? colors.success : '#F59E0B'} />
-                        <Text style={[styles.actionChipText, { color: item.is_banned ? colors.success : '#F59E0B' }]}>
-                          {item.is_banned ? 'UNBAN' : 'BAN'}
-                        </Text>
+                        {actionLoading === item.user_id ? (
+                          <ActivityIndicator size="small" color={item.is_banned ? colors.success : '#F59E0B'} />
+                        ) : (
+                          <>
+                            <Ionicons name={item.is_banned ? 'checkmark-circle' : 'ban'} size={14} color={item.is_banned ? colors.success : '#F59E0B'} />
+                            <Text style={[styles.actionChipText, { color: item.is_banned ? colors.success : '#F59E0B' }]}>
+                              {item.is_banned ? 'DÉBANNIR' : 'BANNIR'}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID={`badge-user-${item.user_id}`}
+                        style={[styles.actionChip, styles.actionChipBlue]}
+                        onPress={() => { setBadgeTargetUser(item); setBadgeModal(true); }}
+                      >
+                        <Ionicons name="ribbon" size={14} color={colors.secondary} />
+                        <Text style={[styles.actionChipText, { color: colors.secondary }]}>BADGES</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         testID={`delete-user-${item.user_id}`}
                         style={[styles.actionChip, styles.actionChipRed]}
                         onPress={() => handleDeleteUser(item.user_id, item.name)}
+                        disabled={actionLoading === item.user_id}
                       >
                         <Ionicons name="trash" size={14} color={colors.error} />
                         <Text style={[styles.actionChipText, { color: colors.error }]}>SUPPRIMER</Text>
@@ -285,7 +359,7 @@ export default function AdminScreen() {
               renderItem={({ item }) => (
                 <View style={styles.spotCard}>
                   <View style={styles.spotCardHeader}>
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.spotCarName}>{item.brand} {item.model}</Text>
                       <Text style={styles.spotUser}>par {item.user_name}</Text>
                     </View>
@@ -302,11 +376,18 @@ export default function AdminScreen() {
                   </View>
                   <TouchableOpacity
                     testID={`delete-spot-${item.spot_id}`}
-                    style={[styles.actionChip, styles.actionChipRed, { alignSelf: 'flex-start' }]}
-                    onPress={() => handleDeleteSpot(item.spot_id)}
+                    style={[styles.actionChip, styles.actionChipRed, { alignSelf: 'flex-start', marginTop: 8 }]}
+                    onPress={() => handleDeleteSpot(item.spot_id, `${item.brand} ${item.model}`)}
+                    disabled={actionLoading === item.spot_id}
                   >
-                    <Ionicons name="trash" size={14} color={colors.error} />
-                    <Text style={[styles.actionChipText, { color: colors.error }]}>SUPPRIMER LE SPOT</Text>
+                    {actionLoading === item.spot_id ? (
+                      <ActivityIndicator size="small" color={colors.error} />
+                    ) : (
+                      <>
+                        <Ionicons name="trash" size={14} color={colors.error} />
+                        <Text style={[styles.actionChipText, { color: colors.error }]}>SUPPRIMER</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -317,6 +398,60 @@ export default function AdminScreen() {
           )}
         </>
       )}
+
+      {/* Badge Management Modal */}
+      <Modal visible={badgeModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>GÉRER BADGES</Text>
+            <Text style={styles.modalSubtitle}>{badgeTargetUser?.name}</Text>
+
+            {badgeTargetUser?.badges && badgeTargetUser.badges.length > 0 && (
+              <View style={styles.currentBadges}>
+                <Text style={styles.currentBadgesLabel}>Badges actuels :</Text>
+                <Text style={styles.currentBadgesText}>{badgeTargetUser.badges.join(', ')}</Text>
+              </View>
+            )}
+
+            <Text style={styles.availableBadgesLabel}>Badges disponibles :</Text>
+            <Text style={styles.availableBadgesText}>
+              first_spot, spotter_10, collector_50, photographer_100, legend_500, top_10, top_3, champion, supercar_hunter, german_expert, italian_stallion
+            </Text>
+
+            <TextInput
+              testID="badge-id-input"
+              style={styles.modalInput}
+              value={badgeId}
+              onChangeText={setBadgeId}
+              placeholder="ID du badge (ex: champion)"
+              placeholderTextColor="#71717A"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                testID="badge-add-btn"
+                style={[styles.modalBtn, { backgroundColor: colors.success }]}
+                onPress={() => handleManageBadge('add')}
+              >
+                <Text style={styles.modalBtnText}>AJOUTER</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="badge-remove-btn"
+                style={[styles.modalBtn, { backgroundColor: colors.error }]}
+                onPress={() => handleManageBadge('remove')}
+              >
+                <Text style={styles.modalBtnText}>RETIRER</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              testID="badge-modal-close"
+              style={styles.modalCloseBtn}
+              onPress={() => { setBadgeModal(false); setBadgeId(''); }}
+            >
+              <Text style={styles.modalCloseBtnText}>FERMER</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -330,7 +465,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { fontSize: 22, fontWeight: '900', color: colors.textPrimary, letterSpacing: 2 },
-  tabsRow: { flexGrow: 0, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  tabsRow: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+  tabsContent: { paddingHorizontal: 12, paddingVertical: 10 },
   tabBtn: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
     backgroundColor: colors.surfaceHighlight, marginRight: 8,
@@ -367,7 +503,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   avatarText: { color: colors.textPrimary, fontWeight: '800', fontSize: 14 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   userName: { color: colors.textPrimary, fontWeight: '700', fontSize: 14 },
   adminBadge: { backgroundColor: colors.secondary + '30', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   adminBadgeText: { color: colors.secondary, fontSize: 9, fontWeight: '800' },
@@ -377,7 +513,7 @@ const styles = StyleSheet.create({
   userPoints: { color: colors.accent, fontWeight: '900', fontSize: 14, fontFamily: monoFont },
   userMeta: { marginTop: 8 },
   userMetaText: { color: colors.textMuted, fontSize: 12 },
-  userActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  userActions: { flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' },
   actionChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1,
@@ -385,6 +521,7 @@ const styles = StyleSheet.create({
   actionChipRed: { borderColor: colors.error + '50' },
   actionChipYellow: { borderColor: '#F59E0B50' },
   actionChipGreen: { borderColor: colors.success + '50' },
+  actionChipBlue: { borderColor: colors.secondary + '50' },
   actionChipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   spotCard: {
     backgroundColor: colors.surface, borderRadius: 14, padding: 14,
@@ -398,4 +535,29 @@ const styles = StyleSheet.create({
   spotMeta: { marginTop: 8 },
   spotMetaText: { color: colors.textMuted, fontSize: 12 },
   emptyText: { color: colors.textMuted, fontSize: 14 },
+  // Modal styles
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  modalContent: {
+    backgroundColor: colors.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900', letterSpacing: 2, textAlign: 'center' },
+  modalSubtitle: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  currentBadges: { marginBottom: 12, backgroundColor: colors.surfaceHighlight, padding: 10, borderRadius: 8 },
+  currentBadgesLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginBottom: 4 },
+  currentBadgesText: { color: colors.accent, fontSize: 12, fontWeight: '600' },
+  availableBadgesLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginBottom: 4 },
+  availableBadgesText: { color: colors.textSecondary, fontSize: 11, marginBottom: 12 },
+  modalInput: {
+    height: 44, backgroundColor: colors.surfaceHighlight, borderRadius: 10,
+    paddingHorizontal: 14, color: colors.textPrimary, fontSize: 14,
+    borderWidth: 1, borderColor: '#3F3F46', marginBottom: 14,
+  },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalBtn: { flex: 1, height: 44, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  modalBtnText: { color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 1 },
+  modalCloseBtn: { marginTop: 14, alignItems: 'center', paddingVertical: 10 },
+  modalCloseBtnText: { color: colors.textMuted, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
 });
