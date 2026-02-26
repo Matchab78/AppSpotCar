@@ -225,7 +225,7 @@ def test_admin_ban_user_success(admin_client, admin_token, bannable_user):
     assert banned_user["is_banned"] == True
     print(f"✓ User ban persisted in database")
 
-def test_banned_user_cannot_login(api_client, bannable_user):
+def test_banned_user_cannot_login(regular_client, bannable_user):
     """Test that banned user gets 403 on login"""
     user_id, email, password = bannable_user
     response = api_client.post(f"{BASE_URL}/api/auth/login", json={
@@ -275,7 +275,7 @@ def test_admin_cannot_ban_admin(admin_client, admin_token):
     assert "Cannot ban an admin" in data["detail"]
     print("✓ Admin cannot ban another admin (403)")
 
-def test_regular_user_cannot_ban(api_client, regular_user_token, bannable_user):
+def test_regular_user_cannot_ban(regular_client, regular_user_token, bannable_user):
     """Test that regular user cannot ban users"""
     token, _ = regular_user_token
     user_id, _, _ = bannable_user
@@ -579,7 +579,7 @@ def test_admin_remove_badge_success(admin_client, admin_token, badge_test_user):
     assert "champion" not in data["badges"]
     print(f"✓ Badge 'champion' removed from user {user_id}")
 
-def test_regular_user_cannot_manage_badges(api_client, regular_user_token, badge_test_user):
+def test_regular_user_cannot_manage_badges(regular_client, regular_user_token, badge_test_user):
     """Test that regular user cannot manage badges"""
     token, _ = regular_user_token
     user_id = badge_test_user
