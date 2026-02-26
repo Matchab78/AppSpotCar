@@ -12,6 +12,7 @@ interface User {
   spot_count: number;
   badges: string[];
   picture: string;
+  is_admin: boolean;
 }
 
 interface AuthContextType {
