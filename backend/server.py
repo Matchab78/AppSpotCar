@@ -66,6 +66,13 @@ class CommentCreate(BaseModel):
 class AIRecognizeRequest(BaseModel):
     image_base64: str
 
+class BadgeManage(BaseModel):
+    badge_id: str
+    action: str  # "add" or "remove"
+
+# Admin emails
+ADMIN_EMAILS = ["mathischab78@gmail.com"]
+
 # ==================== AUTH HELPERS ====================
 
 def create_jwt(user_id: str) -> str:
@@ -210,6 +217,7 @@ async def register(data: UserRegister, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
     user_id = f"user_{uuid.uuid4().hex[:12]}"
+    is_admin = data.email in ADMIN_EMAILS
     user_doc = {
         "user_id": user_id,
         "email": data.email,
@@ -219,6 +227,8 @@ async def register(data: UserRegister, response: Response):
         "total_points": 0,
         "spot_count": 0,
         "badges": [],
+        "is_admin": is_admin,
+        "is_banned": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
@@ -226,7 +236,8 @@ async def register(data: UserRegister, response: Response):
     response.set_cookie("session_token", token, path="/", httponly=True, secure=True, samesite="none", max_age=604800)
     return {
         "user_id": user_id, "email": data.email, "name": data.name,
-        "token": token, "total_points": 0, "spot_count": 0, "badges": [], "picture": ""
+        "token": token, "total_points": 0, "spot_count": 0, "badges": [], "picture": "",
+        "is_admin": is_admin
     }
 
 @api_router.post("/auth/login")
@@ -234,6 +245,8 @@ async def login(data: UserLogin, response: Response):
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user or "password_hash" not in user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.get("is_banned"):
+        raise HTTPException(status_code=403, detail="Account banned")
     if not bcrypt.checkpw(data.password.encode(), user["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_jwt(user["user_id"])
@@ -242,7 +255,8 @@ async def login(data: UserLogin, response: Response):
         "user_id": user["user_id"], "email": user["email"], "name": user["name"],
         "token": token, "total_points": user.get("total_points", 0),
         "spot_count": user.get("spot_count", 0), "badges": user.get("badges", []),
-        "picture": user.get("picture", "")
+        "picture": user.get("picture", ""),
+        "is_admin": user.get("is_admin", False)
     }
 
 @api_router.post("/auth/google-session")
@@ -304,7 +318,8 @@ async def get_me(user: dict = Depends(get_current_user)):
     return {
         "user_id": user["user_id"], "email": user["email"], "name": user["name"],
         "total_points": user.get("total_points", 0), "spot_count": user.get("spot_count", 0),
-        "badges": user.get("badges", []), "picture": user.get("picture", "")
+        "badges": user.get("badges", []), "picture": user.get("picture", ""),
+        "is_admin": user.get("is_admin", False)
     }
 
 @api_router.post("/auth/logout")
