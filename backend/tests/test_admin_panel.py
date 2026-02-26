@@ -31,15 +31,29 @@ TEST_NAME = "Regular Test User"
 
 @pytest.fixture(scope="module")
 def api_client():
-    """Shared requests session"""
+    """Shared requests session - used for creating test data"""
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
     return session
 
 @pytest.fixture(scope="module")
-def admin_token(api_client):
+def admin_client():
+    """Separate session for admin requests to avoid cookie bleeding"""
+    session = requests.Session()
+    session.headers.update({"Content-Type": "application/json"})
+    return session
+
+@pytest.fixture(scope="module")
+def regular_client():
+    """Separate session for regular user requests to avoid cookie bleeding"""
+    session = requests.Session()
+    session.headers.update({"Content-Type": "application/json"})
+    return session
+
+@pytest.fixture(scope="module")
+def admin_token(admin_client):
     """Login as admin and return token"""
-    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+    response = admin_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": ADMIN_EMAIL,
         "password": ADMIN_PASSWORD
     })
@@ -51,9 +65,9 @@ def admin_token(api_client):
     pytest.skip(f"Cannot login as admin: {response.status_code} - {response.text}")
 
 @pytest.fixture(scope="module")
-def regular_user_token(api_client):
+def regular_user_token(regular_client):
     """Create a regular (non-admin) user and return token"""
-    response = api_client.post(f"{BASE_URL}/api/auth/register", json={
+    response = regular_client.post(f"{BASE_URL}/api/auth/register", json={
         "email": TEST_EMAIL,
         "password": TEST_PASSWORD,
         "name": TEST_NAME
