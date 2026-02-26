@@ -350,7 +350,7 @@ def test_admin_cannot_delete_admin(admin_client, admin_token):
     )
     admin_user_id = me_response.json()["user_id"]
     
-    response = api_client.delete(
+    response = admin_client.delete(
         f"{BASE_URL}/api/admin/users/{admin_user_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -362,7 +362,7 @@ def test_admin_cannot_delete_admin(admin_client, admin_token):
 def test_regular_user_cannot_delete_user(regular_client, regular_user_token):
     """Test that regular user cannot delete users"""
     token, user_id = regular_user_token
-    response = api_client.delete(
+    response = regular_client.delete(
         f"{BASE_URL}/api/admin/users/some_user_id",
         headers={"Authorization": f"Bearer {token}"}
     )
