@@ -228,7 +228,7 @@ def test_admin_ban_user_success(admin_client, admin_token, bannable_user):
 def test_banned_user_cannot_login(regular_client, bannable_user):
     """Test that banned user gets 403 on login"""
     user_id, email, password = bannable_user
-    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+    response = regular_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": email,
         "password": password
     })
@@ -240,7 +240,7 @@ def test_banned_user_cannot_login(regular_client, bannable_user):
 def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
     """Test POST /api/admin/users/{user_id}/unban"""
     user_id, email, password = bannable_user
-    response = api_client.post(
+    response = admin_client.post(
         f"{BASE_URL}/api/admin/users/{user_id}/unban",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -250,7 +250,7 @@ def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
     print(f"✓ User {user_id} unbanned successfully")
     
     # Verify user can now login
-    login_response = regular_client.post(f"{BASE_URL}/api/auth/login", json={
+    login_response = admin_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": email,
         "password": password
     })
@@ -260,13 +260,13 @@ def test_admin_unban_user_success(admin_client, admin_token, bannable_user):
 def test_admin_cannot_ban_admin(admin_client, admin_token):
     """Test that admin cannot ban another admin user"""
     # Get admin user_id
-    me_response = regular_client.get(
+    me_response = admin_client.get(
         f"{BASE_URL}/api/auth/me",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     admin_user_id = me_response.json()["user_id"]
     
-    response = regular_client.post(
+    response = admin_client.post(
         f"{BASE_URL}/api/admin/users/{admin_user_id}/ban",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
@@ -279,7 +279,7 @@ def test_regular_user_cannot_ban(regular_client, regular_user_token, bannable_us
     """Test that regular user cannot ban users"""
     token, _ = regular_user_token
     user_id, _, _ = bannable_user
-    response = api_client.post(
+    response = regular_client.post(
         f"{BASE_URL}/api/admin/users/{user_id}/ban",
         headers={"Authorization": f"Bearer {token}"}
     )
