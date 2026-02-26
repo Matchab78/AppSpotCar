@@ -51,30 +51,14 @@ export default function CameraScreen() {
         }
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const pickerFn = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+      const result = await pickerFn({
         mediaTypes: ['images'],
         quality: 0.7,
         base64: true,
         allowsEditing: true,
         aspect: [16, 9],
-        ...(useCamera ? {} : {}),
       });
-
-      if (useCamera) {
-        const camResult = await ImagePicker.launchCameraAsync({
-          quality: 0.7,
-          base64: true,
-          allowsEditing: true,
-          aspect: [16, 9],
-        });
-        if (!camResult.canceled && camResult.assets[0]) {
-          setImageBase64(`data:image/jpeg;base64,${camResult.assets[0].base64}`);
-          setStep('recognize');
-          getLocation();
-          return;
-        }
-        return;
-      }
 
       if (!result.canceled && result.assets[0]) {
         setImageBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);

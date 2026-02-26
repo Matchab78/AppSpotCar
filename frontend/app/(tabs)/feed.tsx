@@ -139,7 +139,7 @@ export default function FeedScreen() {
             resizeMode="cover"
           />
         ) : (
-          <View style={styles.imagePlaceholder}>
+          <View style={[styles.spotImage, styles.imagePlaceholder]}>
             <Ionicons name="car-sport" size={48} color={colors.textMuted} />
           </View>
         )}
