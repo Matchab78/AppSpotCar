@@ -57,6 +57,21 @@ Street.OS est une application mobile de carspotting permettant aux passionnés a
 - **Auth**: JWT + Emergent Google OAuth
 - **Géolocalisation**: expo-location
 
+## Admin Panel
+- **Email admin** : mathischab78@gmail.com (flag `is_admin: true` en BDD)
+- **Fonctionnalités** :
+  - Dashboard stats globales (utilisateurs, spots, commentaires, likes, bannis, distribution rareté)
+  - Gestion utilisateurs : voir, bannir/débannir, supprimer (cascade: spots + commentaires + sessions)
+  - Gestion spots : voir, supprimer (retire les points au user)
+  - Gestion commentaires : supprimer
+  - Gestion badges : ajouter/retirer manuellement
+- **Accès** : Onglet "Admin" visible uniquement pour les utilisateurs admin
+- **Sécurité** : Tous les endpoints `/api/admin/*` protégés par middleware `require_admin`
+- Protection : impossible de ban/supprimer un autre admin
+
+## Accès base de données
+Voir le fichier `GUIDE_MONGODB.md` à la racine du projet pour les instructions complètes (MongoDB Compass + mongosh).
+
 ## Design
 - Dark mode exclusif
 - Thème "Street.OS" HUD/Neon
