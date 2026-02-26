@@ -284,6 +284,7 @@ async def google_session(request: Request, response: Response):
         }})
     else:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
+        is_admin = data["email"] in ADMIN_EMAILS
         user_doc = {
             "user_id": user_id,
             "email": data["email"],
@@ -292,6 +293,8 @@ async def google_session(request: Request, response: Response):
             "total_points": 0,
             "spot_count": 0,
             "badges": [],
+            "is_admin": is_admin,
+            "is_banned": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(user_doc)
@@ -310,7 +313,8 @@ async def google_session(request: Request, response: Response):
         "user_id": user["user_id"], "email": user["email"], "name": user["name"],
         "token": session_token, "total_points": user.get("total_points", 0),
         "spot_count": user.get("spot_count", 0), "badges": user.get("badges", []),
-        "picture": user.get("picture", "")
+        "picture": user.get("picture", ""),
+        "is_admin": user.get("is_admin", False)
     }
 
 @api_router.get("/auth/me")
