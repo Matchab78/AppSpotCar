@@ -7,8 +7,19 @@ import requests
 import os
 import base64
 import time
+from pathlib import Path
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', '').rstrip('/')
+# Load BACKEND_URL from frontend/.env
+def load_backend_url():
+    frontend_env = Path('/app/frontend/.env')
+    if frontend_env.exists():
+        with open(frontend_env) as f:
+            for line in f:
+                if line.startswith('EXPO_PUBLIC_BACKEND_URL='):
+                    return line.split('=', 1)[1].strip()
+    return ''
+
+BASE_URL = load_backend_url().rstrip('/')
 
 # Test user credentials
 TEST_EMAIL = f"test_user_{int(time.time())}@example.com"
