@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="5" time="2.696" timestamp="2026-02-26T10:33:47.655206+00:00" hostname="agent-env-4fa5d1b0-1276-4856-9557-8b55fae47339"><testcase classname="backend.tests.test_bug_fixes_iteration3" name="test_leaderboard_excludes_banned_users" time="1.118"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_bug_fixes_iteration3.py:114: in test_leaderboard_excludes_banned_users
+    assert ban_response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_bug_fixes_iteration3" name="test_feed_excludes_banned_users_spots" time="0.212"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_bug_fixes_iteration3.py:168: in test_feed_excludes_banned_users_spots
+    assert ban_response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_bug_fixes_iteration3" name="test_admin_delete_spot_deducts_points" time="0.442"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_bug_fixes_iteration3.py:248: in test_admin_delete_spot_deducts_points
+    assert delete_response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_bug_fixes_iteration3" name="test_admin_delete_user_removes_all_data" time="0.437"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_bug_fixes_iteration3.py:319: in test_admin_delete_user_removes_all_data
+    assert delete_response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_bug_fixes_iteration3" name="test_admin_ban_unban_user_endpoints" time="0.350"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_bug_fixes_iteration3.py:368: in test_admin_ban_unban_user_endpoints
+    assert ban_response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase></testsuite></testsuites>
