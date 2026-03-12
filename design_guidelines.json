@@ -1,0 +1,173 @@
+{
+  "project_name": "Street.OS Car Spotting",
+  "theme_mode": "dark",
+  "design_philosophy": {
+    "core_concept": "Street.OS",
+    "vibe": "High-Octane, Asphalt, Neon, Precision, HUD-interface",
+    "emotional_tone": "Aggressive, Premium, Technical",
+    "archetype": "Electric & Neon mixed with Performance Pro",
+    "principles": [
+      "Dark Mode Only: The street comes alive at night.",
+      "HUD Aesthetics: Thin lines, corner brackets, monospace data points.",
+      "Immersive Media: Photos are the hero. UI fades away.",
+      "Tactile Feedback: Haptic feedback on interactions (use expo-haptics).",
+      "Performance First: FlatList for everything. Memoize heavy components."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "heading": "System (Platform Default)",
+      "body": "System (Platform Default)",
+      "mono": "Platform.select({ ios: 'Courier', android: 'monospace' })"
+    },
+    "scale": {
+      "xs": 12,
+      "sm": 14,
+      "base": 16,
+      "lg": 18,
+      "xl": 20,
+      "2xl": 24,
+      "3xl": 30,
+      "4xl": 36
+    },
+    "styles": {
+      "heading_xl": {
+        "fontSize": 36,
+        "fontWeight": "900",
+        "textTransform": "uppercase",
+        "letterSpacing": 1.5,
+        "color": "#FAFAFA"
+      },
+      "heading_lg": {
+        "fontSize": 24,
+        "fontWeight": "800",
+        "textTransform": "uppercase",
+        "letterSpacing": 1,
+        "color": "#FAFAFA"
+      },
+      "body_base": {
+        "fontSize": 16,
+        "fontWeight": "400",
+        "color": "#A1A1AA"
+      },
+      "label_mono": {
+        "fontSize": 12,
+        "fontFamily": "Platform.select({ ios: 'Courier', android: 'monospace' })",
+        "textTransform": "uppercase",
+        "color": "#52525B",
+        "letterSpacing": 0.5
+      }
+    }
+  },
+  "colors": {
+    "background": "#09090B",
+    "surface": "#18181B",
+    "surface_highlight": "#27272A",
+    "border": "#27272A",
+    "primary": "#EF4444",
+    "secondary": "#3B82F6",
+    "accent": "#EAB308",
+    "text": {
+      "primary": "#FAFAFA",
+      "secondary": "#A1A1AA",
+      "muted": "#52525B",
+      "inverse": "#09090B"
+    },
+    "status": {
+      "success": "#22C55E",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 48,
+    "container_padding": 16
+  },
+  "layout": {
+    "safe_area": "Use SafeAreaView from react-native-safe-area-context",
+    "navigation": "expo-router with Stack and Tabs",
+    "list_view": "FlatList for feeds, ScrollView for static forms",
+    "touch_target": 44
+  },
+  "components": {
+    "Button": {
+      "base": {
+        "height": 48,
+        "borderRadius": 9999,
+        "justifyContent": "center",
+        "alignItems": "center",
+        "flexDirection": "row"
+      },
+      "primary": {
+        "backgroundColor": "#EF4444"
+      },
+      "secondary": {
+        "backgroundColor": "#27272A",
+        "borderWidth": 1,
+        "borderColor": "#3F3F46"
+      },
+      "text": {
+        "fontWeight": "700",
+        "fontSize": 16,
+        "textTransform": "uppercase",
+        "letterSpacing": 1
+      }
+    },
+    "Card": {
+      "base": {
+        "backgroundColor": "#18181B",
+        "borderRadius": 16,
+        "padding": 16,
+        "borderWidth": 1,
+        "borderColor": "#27272A"
+      }
+    },
+    "Input": {
+      "base": {
+        "height": 48,
+        "backgroundColor": "#27272A",
+        "borderRadius": 12,
+        "paddingHorizontal": 16,
+        "color": "#FAFAFA",
+        "fontSize": 16,
+        "borderWidth": 1,
+        "borderColor": "#3F3F46"
+      },
+      "placeholderTextColor": "#71717A"
+    },
+    "icons": "Use @expo/vector-icons (Ionicons, MaterialCommunityIcons preferred)"
+  },
+  "assets": {
+    "image_urls": {
+      "hero_background": "https://images.unsplash.com/photo-1769674154615-0cd4f99f9945?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxzdXBlcmNhciUyMG5lb24lMjBjaXR5JTIwbmlnaHQlMjBzdHJlZXR8ZW58MHx8fHwxNzcyMDk1MzA0fDA&ixlib=rb-4.1.0&q=85",
+      "street_vibe": "https://images.unsplash.com/photo-1763319856452-23e3aca63f47?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwzfHxzdXBlcmNhciUyMG5lb24lMjBjaXR5JTIwbmlnaHQlMjBzdHJlZXR8ZW58MHx8fHwxNzcyMDk1MzA0fDA&ixlib=rb-4.1.0&q=85",
+      "car_detail": "https://images.unsplash.com/photo-1702450679666-af2405b84e23?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHxjYXIlMjB3aGVlbCUyMGNsb3NlJTIwdXAlMjBmdXR1cmlzdGljJTIwZHJpdmVyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzcyMDk1MzI5fDA&ixlib=rb-4.1.0&q=85",
+      "profile_avatar_placeholder": "https://images.unsplash.com/photo-1742770039858-3462243add1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHw0fHxjYXIlMjB3aGVlbCUyMGNsb3NlJTIwdXAlMjBmdXR1cmlzdGljJTIwZHJpdmVyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzcyMDk1MzI5fDA&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: Use StyleSheet.create() for ALL styles. DO NOT use Tailwind class strings.",
+    "CRITICAL: Do not use HTML elements (div, span, p). Use View, Text, Pressable, Image.",
+    "CRITICAL: Use expo-image for all images (better caching).",
+    "CRITICAL: Add `data-testid` to all interactive elements.",
+    "CRITICAL: Implement Dark Mode ONLY. No light mode toggle.",
+    "Use expo-blur for glassmorphism effects (e.g., TabBar, Overlays).",
+    "Use expo-haptics for button presses and refresh actions.",
+    "Use expo-router for all navigation logic.",
+    "Implement a 'Scanner/HUD' overlay for the camera screen using absolute positioning and thin borders."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI slop' aesthetics. No generic gradients.",
+    "Use negative space generously. Don't crowd the UI.",
+    "Text hierarchy: Uppercase Bold Headers vs Clean Regular Body.",
+    "All interactions must have visual feedback (opacity change or scale).",
+    "Use 'Red' (#EF4444) only for Primary Actions and Critical Alerts.",
+    "Use 'Zinc' grays for structural elements to maintain the dark theme depth."
+  ]
+}
