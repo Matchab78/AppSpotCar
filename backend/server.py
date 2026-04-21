@@ -338,13 +338,21 @@ async def logout(request: Request, response: Response):
 
 @api_router.post("/recognize")
 async def recognize_car(data: AIRecognizeRequest, user: dict = Depends(get_current_user)):
-    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    import google.generativeai as genai
+    import json
+    import base64
 
     try:
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"recognize_{uuid.uuid4().hex[:8]}",
-            system_message="""You are an expert car identifier. Analyze the image and return ONLY a JSON object with these fields:
+        genai.configure(api_key=os.environ.get('GEMINI_API_KEY', ''))
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        image_data = data.image_base64
+        if image_data.startswith('data:'):
+            image_data = image_data.split(',')[1]
+
+        image_bytes = base64.b64decode(image_data)
+
+        prompt = """You are an expert car identifier. Analyze the image and return ONLY a JSON object:
 {
   "brand": "Car brand name",
   "model": "Car model name",
@@ -352,29 +360,16 @@ async def recognize_car(data: AIRecognizeRequest, user: dict = Depends(get_curre
   "rarity_tier": one of "common", "sport", "performance", "supercar", "hypercar", "ultra_rare",
   "confidence": float 0-1
 }
-
-Rarity tiers:
-- common: everyday cars (Toyota Corolla, VW Golf, BMW 3 Series base, Audi A3, Mercedes C-Class)
-- sport: sporty variants (BMW M3, Audi S3, Mercedes AMG C43, Golf GTI)
-- performance: high-performance (Audi R8, BMW M5 CS, Mercedes AMG GT, Nissan GT-R)
-- supercar: supercars (Porsche 911 GT3, Corvette Z06, Aston Martin)
-- hypercar: hypercars (Ferrari, Lamborghini, McLaren)
-- ultra_rare: ultra rare (Bugatti, Pagani, Koenigsegg, one-off builds)
-
 Return ONLY the JSON, no other text."""
-        ).with_model("openai", "gpt-4o")
 
-        image_content = ImageContent(image_base64=data.image_base64)
-        user_message = UserMessage(
-            text="Identify this car. Return only the JSON object.",
-            file_contents=[image_content]
-        )
-        response_text = await chat.send_message(user_message)
+        response = model.generate_content([
+            prompt,
+            {"mime_type": "image/jpeg", "data": image_bytes}
+        ])
 
-        import json
-        cleaned = response_text.strip()
+        cleaned = response.text.strip()
         if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            cleaned = cleaned.split("\n", 1)[1]
             if cleaned.endswith("```"):
                 cleaned = cleaned[:-3]
             cleaned = cleaned.strip()

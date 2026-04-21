@@ -205,7 +205,7 @@ export default function FeedScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>STREET.OS</Text>
+        <Text style={styles.headerTitle}>SpotDrive</Text>
         <View style={styles.headerBadge}>
           <Ionicons name="flash" size={14} color={colors.accent} />
           <Text style={styles.headerPoints}>{user?.total_points || 0}</Text>
