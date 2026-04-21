@@ -15,6 +15,7 @@ import httpx
 import base64
 import tempfile
 from datetime import datetime, timezone, timedelta
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -338,13 +339,13 @@ async def logout(request: Request, response: Response):
 
 @api_router.post("/recognize")
 async def recognize_car(data: AIRecognizeRequest, user: dict = Depends(get_current_user)):
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     import json
     import base64
 
     try:
-        genai.configure(api_key=os.environ.get('GEMINI_API_KEY', ''))
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client_ai = genai.Client(api_key=os.environ.get('GEMINI_API_KEY', ''))
 
         image_data = data.image_base64
         if image_data.startswith('data:'):
@@ -362,10 +363,13 @@ async def recognize_car(data: AIRecognizeRequest, user: dict = Depends(get_curre
 }
 Return ONLY the JSON, no other text."""
 
-        response = model.generate_content([
-            prompt,
-            {"mime_type": "image/jpeg", "data": image_bytes}
-        ])
+        response = client_ai.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
+                prompt
+            ]
+        )
 
         cleaned = response.text.strip()
         if cleaned.startswith("```"):
@@ -423,9 +427,9 @@ async def create_spot(data: SpotCreate, user: dict = Depends(get_current_user)):
 
     # Update user stats
     await db.users.update_one(
-        {"user_id": user["user_id"]},
-        {"$inc": {"total_points": points, "spot_count": 1}}
-    )
+    {"user_id": user["user_id"]},
+    {"$inc": {"total_points": points, "spot_count": 1, "monthly_points": points}}
+)
 
     # Check badges
     await check_and_award_badges(user["user_id"])
@@ -513,8 +517,8 @@ async def get_comments(spot_id: str):
 async def get_leaderboard(user: dict = Depends(get_current_user)):
     users = await db.users.find(
         {"is_banned": {"$ne": True}},
-        {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "total_points": 1, "spot_count": 1, "badges": 1}
-    ).sort("total_points", -1).to_list(100)
+       {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "total_points": 1, "monthly_points": 1, "spot_count": 1, "badges": 1}
+    ).sort("monthly_points", -1).to_list(100)
 
     for i, u in enumerate(users):
         u["rank"] = i + 1
@@ -540,6 +544,30 @@ async def get_profile(target_user_id: str, user: dict = Depends(get_current_user
 @api_router.get("/badges")
 async def get_all_badges():
     return BADGES
+
+# ==================== MONTHLY RESET ====================
+
+async def reset_monthly_points():
+    while True:
+        now = datetime.now(timezone.utc)
+        # Calcule le prochain 1er du mois
+        if now.month == 12:
+            next_reset = datetime(now.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        else:
+            next_reset = datetime(now.year, now.month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        
+        wait_seconds = (next_reset - now).total_seconds()
+        logger.info(f"Prochain reset mensuel dans {wait_seconds/3600:.1f} heures")
+        await asyncio.sleep(wait_seconds)
+        
+        # Reset tous les monthly_points
+        await db.users.update_many({}, {"$set": {"monthly_points": 0}})
+        logger.info("Reset mensuel des points effectué !")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(reset_monthly_points())
+
 
 # ==================== HEALTH ====================
 

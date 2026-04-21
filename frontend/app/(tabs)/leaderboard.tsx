@@ -14,7 +14,7 @@ interface LeaderboardUser {
   user_id: string;
   name: string;
   picture: string;
-  total_points: number;
+  monthly_points: number;
   spot_count: number;
   badges: string[];
   rank: number;
@@ -51,28 +51,11 @@ export default function LeaderboardScreen() {
     }, [fetchLeaderboard])
   );
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return { icon: 'trophy' as const, color: '#EAB308' };
-    if (rank === 2) return { icon: 'medal' as const, color: '#94A3B8' };
-    if (rank === 3) return { icon: 'medal' as const, color: '#D97706' };
-    return null;
-  };
-
   const renderItem = ({ item }: { item: LeaderboardUser }) => {
-    const rankInfo = getRankIcon(item.rank);
     const isMe = item.user_id === user?.user_id;
     return (
-      <View
-        testID={`leaderboard-row-${item.rank}`}
-        style={[styles.row, isMe && styles.rowHighlight]}
-      >
-        <View style={styles.rankSection}>
-          {rankInfo ? (
-            <Ionicons name={rankInfo.icon} size={24} color={rankInfo.color} />
-          ) : (
-            <Text style={styles.rankNum}>{item.rank}</Text>
-          )}
-        </View>
+      <View style={[styles.row, isMe && styles.rowHighlight]}>
+        <Text style={styles.rankNum}>#{item.rank}</Text>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
         </View>
@@ -80,12 +63,16 @@ export default function LeaderboardScreen() {
           <Text style={[styles.userName, isMe && styles.userNameMe]}>
             {item.name} {isMe ? '(toi)' : ''}
           </Text>
-          <Text style={styles.statsText}>
-            {item.spot_count} spots • {item.badges?.length || 0} badges
-          </Text>
+          <View style={styles.statsRow}>
+            <Ionicons name="camera" size={11} color={colors.textMuted} />
+            <Text style={styles.statsText}>{item.spot_count} spots</Text>
+            <Ionicons name="ribbon" size={11} color={colors.textMuted} style={{ marginLeft: 8 }} />
+            <Text style={styles.statsText}>{item.badges?.length || 0} badges</Text>
+          </View>
         </View>
         <View style={styles.pointsSection}>
-          <Text style={styles.pointsNum}>{item.total_points}</Text>
+          <Ionicons name="flash" size={14} color={colors.accent} />
+          <Text style={styles.pointsNum}>{item.monthly_points || 0}</Text>
           <Text style={styles.pointsLabel}>PTS</Text>
         </View>
       </View>
@@ -100,6 +87,13 @@ export default function LeaderboardScreen() {
     );
   }
 
+  const top3 = leaderboard.slice(0, 3);
+  const podiumOrder = [top3[1], top3[0], top3[2]];
+  const podiumColors = ['#94A3B8', '#EAB308', '#D97706'];
+  const podiumHeights = [80, 110, 60];
+  const podiumRanks = [2, 1, 3];
+  const podiumIcons = ['medal', 'trophy', 'medal'];
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -111,32 +105,51 @@ export default function LeaderboardScreen() {
         )}
       </View>
 
-      {/* Top 3 Podium */}
+      {/* Podium */}
       {leaderboard.length >= 3 && (
-        <View style={styles.podium}>
-          {[leaderboard[1], leaderboard[0], leaderboard[2]].map((u, i) => {
+        <View style={styles.podiumContainer}>
+          {podiumOrder.map((u, i) => {
             if (!u) return null;
-            const podiumRank = [2, 1, 3][i];
-            const isFirst = podiumRank === 1;
+            const color = podiumColors[i];
+            const height = podiumHeights[i];
+            const isFirst = podiumRanks[i] === 1;
             return (
-              <View key={u.user_id} style={[styles.podiumItem, isFirst && styles.podiumFirst]}>
-                <View style={[styles.podiumAvatar, isFirst && styles.podiumAvatarFirst]}>
-                  <Text style={[styles.podiumAvatarText, isFirst && { fontSize: 22 }]}>
+              <View key={u.user_id} style={styles.podiumItem}>
+                {/* Icon */}
+                <Ionicons name={podiumIcons[i] as any} size={isFirst ? 28 : 20} color={color} />
+                {/* Avatar */}
+                <View style={[styles.podiumAvatar, { borderColor: color, width: isFirst ? 68 : 52, height: isFirst ? 68 : 52, borderRadius: isFirst ? 34 : 26 }]}>
+                  <Text style={[styles.podiumAvatarText, { fontSize: isFirst ? 24 : 18 }]}>
                     {u.name?.charAt(0)?.toUpperCase()}
                   </Text>
                 </View>
-                {isFirst && <Ionicons name="trophy" size={20} color="#EAB308" style={{ marginTop: 4 }} />}
-                <Text style={styles.podiumName} numberOfLines={1}>{u.name}</Text>
-                <Text style={styles.podiumPoints}>{u.total_points}</Text>
-                <View style={[styles.podiumBar, { height: isFirst ? 60 : podiumRank === 2 ? 40 : 24 }]} />
+                {/* Name */}
+                <Text style={[styles.podiumName, { color }]} numberOfLines={1}>{u.name}</Text>
+                {/* Points */}
+                <View style={styles.podiumPointsRow}>
+                  <Ionicons name="flash" size={12} color={colors.accent} />
+                  <Text style={styles.podiumPoints}>{u.total_points}</Text>
+                </View>
+                {/* Spots + Badges */}
+                <Text style={styles.podiumStats}>{u.spot_count} spots · {u.badges?.length || 0} badges</Text>
+                {/* Bar */}
+                <View style={[styles.podiumBar, { height, borderColor: color, borderTopColor: color }]}>
+                  <Text style={[styles.podiumRankText, { color }]}>#{podiumRanks[i]}</Text>
+                </View>
               </View>
             );
           })}
         </View>
       )}
 
+      {/* Divider */}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>SUITE DU CLASSEMENT</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
       <FlatList
-        testID="leaderboard-list"
         data={leaderboard.slice(3)}
         keyExtractor={item => item.user_id}
         renderItem={renderItem}
@@ -145,11 +158,9 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchLeaderboard(); }} tintColor={colors.primary} />
         }
         ListEmptyComponent={
-          leaderboard.length <= 3 ? null : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Pas encore assez de joueurs</Text>
-            </View>
-          )
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Pas encore d'autres joueurs</Text>
+          </View>
         }
       />
     </SafeAreaView>
@@ -163,53 +174,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { fontSize: 22, fontWeight: '900', color: colors.textPrimary, letterSpacing: 2 },
-  myRankBadge: {
-    backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 20,
-  },
+  myRankBadge: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   myRankText: { color: '#fff', fontWeight: '900', fontSize: 16, fontFamily: monoFont },
-  podium: {
+  podiumContainer: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end',
-    paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16, gap: 12,
+    paddingHorizontal: 16, paddingTop: 24, paddingBottom: 0, gap: 8,
   },
-  podiumItem: { alignItems: 'center', flex: 1 },
-  podiumFirst: { marginBottom: 16 },
+  podiumItem: { flex: 1, alignItems: 'center', gap: 4 },
   podiumAvatar: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceHighlight,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.border,
+    borderWidth: 2.5, backgroundColor: colors.surfaceHighlight,
+    justifyContent: 'center', alignItems: 'center',
   },
-  podiumAvatarFirst: {
-    width: 64, height: 64, borderRadius: 32, borderColor: '#EAB308', borderWidth: 3,
-  },
-  podiumAvatarText: { color: colors.textPrimary, fontWeight: '800', fontSize: 18 },
-  podiumName: { color: colors.textPrimary, fontSize: 12, fontWeight: '700', marginTop: 6 },
-  podiumPoints: { color: colors.accent, fontSize: 14, fontWeight: '900', fontFamily: monoFont, marginTop: 2 },
+  podiumAvatarText: { color: colors.textPrimary, fontWeight: '800' },
+  podiumName: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, textAlign: 'center' },
+  podiumPointsRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  podiumPoints: { color: colors.accent, fontSize: 13, fontWeight: '900', fontFamily: monoFont },
+  podiumStats: { color: colors.textMuted, fontSize: 10, textAlign: 'center' },
   podiumBar: {
-    width: '80%', backgroundColor: colors.surfaceHighlight, borderRadius: 4, marginTop: 6,
-    borderWidth: 1, borderColor: colors.border,
+    width: '100%', borderWidth: 1, borderBottomWidth: 0,
+    backgroundColor: colors.surfaceHighlight, borderRadius: 4,
+    justifyContent: 'center', alignItems: 'center', marginTop: 4,
   },
+  podiumRankText: { fontSize: 18, fontWeight: '900', fontFamily: monoFont },
+  divider: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 8,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
   listContent: { paddingHorizontal: 16, paddingBottom: 20 },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10,
   },
-  rowHighlight: {
-    backgroundColor: colors.primary + '15', borderRadius: 12,
-    paddingHorizontal: 8, marginHorizontal: -8,
-  },
-  rankSection: { width: 36, alignItems: 'center' },
-  rankNum: { color: colors.textMuted, fontSize: 16, fontWeight: '800', fontFamily: monoFont },
+  rowHighlight: { backgroundColor: colors.primary + '15', borderRadius: 12, paddingHorizontal: 8, marginHorizontal: -8 },
+  rankNum: { color: colors.textMuted, fontSize: 14, fontWeight: '800', fontFamily: monoFont, width: 32, textAlign: 'center' },
   avatar: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceHighlight,
-    justifyContent: 'center', alignItems: 'center', marginLeft: 8,
+    justifyContent: 'center', alignItems: 'center',
   },
   avatarText: { color: colors.textPrimary, fontWeight: '800', fontSize: 16 },
-  infoSection: { flex: 1, marginLeft: 12 },
-  userName: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  infoSection: { flex: 1 },
+  userName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   userNameMe: { color: colors.primary },
-  statsText: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  pointsSection: { alignItems: 'flex-end' },
-  pointsNum: { color: colors.accent, fontSize: 18, fontWeight: '900', fontFamily: monoFont },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  statsText: { color: colors.textMuted, fontSize: 11 },
+  pointsSection: { alignItems: 'center', flexDirection: 'row', gap: 3 },
+  pointsNum: { color: colors.accent, fontSize: 16, fontWeight: '900', fontFamily: monoFont },
   pointsLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
   emptyState: { alignItems: 'center', paddingTop: 24 },
   emptyText: { color: colors.textMuted, fontSize: 14 },

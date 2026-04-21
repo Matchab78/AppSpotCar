@@ -237,25 +237,16 @@ export default function CameraScreen() {
             </View>
           ) : (
             <View style={styles.recognizeActions}>
-              <TouchableOpacity
-                testID="ai-recognize-btn"
-                style={styles.primaryBtn}
-                onPress={recognizeCar}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="sparkles" size={20} color="#fff" />
-                <Text style={styles.primaryBtnText}>IDENTIFIER PAR IA</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                testID="manual-btn"
-                style={styles.secondaryBtn}
-                onPress={skipRecognition}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="pencil" size={20} color={colors.textPrimary} />
-                <Text style={styles.secondaryBtnText}>REMPLIR MANUELLEMENT</Text>
-              </TouchableOpacity>
-            </View>
+  <TouchableOpacity
+    testID="manual-btn"
+    style={styles.primaryBtn}
+    onPress={skipRecognition}
+    activeOpacity={0.8}
+  >
+    <Ionicons name="pencil" size={20} color="#fff" />
+    <Text style={styles.primaryBtnText}>REMPLIR LES INFOS</Text>
+  </TouchableOpacity>
+</View>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -365,10 +356,16 @@ export default function CameraScreen() {
 
           {/* Location */}
           {locationName ? (
-            <View style={styles.locationBanner}>
-              <Ionicons name="location" size={16} color={colors.secondary} />
-              <Text style={styles.locationBannerText}>{locationName}</Text>
-            </View>
+           <View style={styles.formGroup}>
+  <Text style={styles.formLabel}>LOCALISATION</Text>
+  <TextInput
+    style={styles.input}
+    value={locationName}
+    onChangeText={setLocationName}
+    placeholder="Ex: Paris, France"
+    placeholderTextColor="#71717A"
+  />
+</View>
           ) : null}
 
           {/* Points preview */}

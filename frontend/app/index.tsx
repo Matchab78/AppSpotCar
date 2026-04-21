@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, ScrollView, ActivityIndicator, Linking
+  Platform, ScrollView, ActivityIndicator, Linking, Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -84,12 +84,12 @@ export default function AuthScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* Logo Area */}
           <View style={styles.logoSection}>
-            <View style={styles.logoIcon}>
-              <Ionicons name="car-sport" size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.logoText}>STREET.OS</Text>
-            <Text style={styles.tagline}>SPOT • COLLECT • DOMINATE</Text>
-          </View>
+  <Image
+    source={require('../assets/images/spotdrive-logo.png')}
+    style={{ width: 280, height: 160 }}
+    resizeMode="contain"
+  />
+</View>
 
           {/* Form */}
           <View style={styles.formSection}>
